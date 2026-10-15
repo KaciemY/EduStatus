@@ -4,6 +4,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { portals } from "@/lib/portals";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 type HistoryEntry = {
   id: number;
   name: string;
@@ -82,7 +84,17 @@ export async function GET() {
     })
   );
 
+  try {
   await saveHistory(results);
+} catch (error) {
+  console.error("Błąd zapisu historii:", error);
+}
+
+return NextResponse.json({
+  success: true,
+  count: results.length,
+  results,
+});
 
   return NextResponse.json({
     success: true,
