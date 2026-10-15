@@ -13,6 +13,7 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import Link from "next/link";
 
 const statusInfo = {
   online: {
@@ -53,6 +54,51 @@ type HistoryEntry = {
   responseTime: number;
   checkedAt: string;
 };
+
+function getLast24HoursStats(history: HistoryEntry[]) {
+  const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+
+  const recentEntries = history.filter((entry) => {
+    const timestamp = new Date(entry.checkedAt).getTime();
+
+    return (
+      Number.isFinite(timestamp) &&
+      timestamp >= cutoff &&
+      timestamp <= Date.now()
+    );
+  });
+
+  if (recentEntries.length === 0) {
+    return {
+      uptime: null,
+      averageResponseTime: null,
+      failedChecks: 0,
+      totalChecks: 0,
+    };
+  }
+
+  const successfulChecks = recentEntries.filter(
+    (entry) => entry.status === "online"
+  );
+
+  const averageResponseTime = Math.round(
+    successfulChecks.reduce(
+      (sum, entry) => sum + entry.responseTime,
+      0
+    ) / (successfulChecks.length || 1)
+  );
+
+  return {
+    uptime: Math.round(
+      (successfulChecks.length / recentEntries.length) * 100
+    ),
+    averageResponseTime:
+      successfulChecks.length > 0 ? averageResponseTime : null,
+    failedChecks: recentEntries.length - successfulChecks.length,
+    totalChecks: recentEntries.length,
+  };
+}
+
 
 export default function Home() {
   
@@ -278,6 +324,13 @@ const toggleHistory = async (portalId: number) => {
         Wersja demonstracyjna
       </div>
 
+      <Link
+        href="/ranking"
+        className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm font-medium transition hover:bg-[var(--surface-secondary)]"
+      >
+        🏆 Ranking
+      </Link>
+
       <button
         type="button"
         onClick={toggleTheme}
@@ -294,7 +347,6 @@ const toggleHistory = async (portalId: number) => {
     </div>
   </div>
 </header>
-
 
       <section className="mx-auto max-w-7xl px-5 pb-16 pt-12 sm:px-8 sm:pt-16">
         
@@ -612,51 +664,57 @@ const toggleHistory = async (portalId: number) => {
               <p className="mb-3 text-xs text-[var(--muted)]">
                 Ostatnie {historyByPortal[portal.id].length} pomiarów
               </p>
+                {/* Statystyki dostępności z ostatnich 24 godzin */}
+                {(() => {
+                  const stats = getLast24HoursStats(
+                    historyByPortal[portal.id] ?? []
+                  );
 
-              {/* Statystyki dostępności */}
-              <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-                  <p className="text-xs text-[var(--muted)]">
-                    Dostępność (uptime)
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-emerald-400">
-                    {Math.round(
-                      (historyByPortal[portal.id].filter(
-                        (entry) => entry.status === "online"
-                      ).length /
-                        historyByPortal[portal.id].length) *
-                        100
-                    )}
-                    %
-                  </p>
-                </div>
+                  return (
+                    <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                        <p className="text-xs text-[var(--muted)]">
+                          Dostępność (24 h)
+                        </p>
+                        <p className="mt-2 text-2xl font-bold text-emerald-400">
+                          {stats.uptime === null ? "—" : `${stats.uptime}%`}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          {stats.totalChecks} pomiarów
+                        </p>
+                      </div>
 
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-                  <p className="text-xs text-[var(--muted)]">
-                    Średni czas odpowiedzi
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-indigo-400">
-                    {Math.round(
-                      historyByPortal[portal.id].reduce(
-                        (sum, entry) => sum + entry.responseTime,
-                        0
-                      ) / historyByPortal[portal.id].length
-                    )}{" "}
-                    <span className="text-sm font-normal">ms</span>
-                  </p>
-                </div>
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                        <p className="text-xs text-[var(--muted)]">
+                          Średni czas odpowiedzi (24 h)
+                        </p>
+                        <p className="mt-2 text-2xl font-bold text-indigo-400">
+                          {stats.averageResponseTime === null
+                            ? "—"
+                            : stats.averageResponseTime}
+                          {stats.averageResponseTime !== null && (
+                            <span className="ml-1 text-sm font-normal">ms</span>
+                          )}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          Tylko udane pomiary
+                        </p>
+                      </div>
 
-                <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-                  <p className="text-xs text-[var(--muted)]">
-                    Nieudane pomiary
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-red-400">
-                    {historyByPortal[portal.id].filter(
-                      (entry) => entry.status !== "online"
-                    ).length}
-                  </p>
-                </div>
-              </div>
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+                        <p className="text-xs text-[var(--muted)]">
+                          Nieudane pomiary (24 h)
+                        </p>
+                        <p className="mt-2 text-2xl font-bold text-red-400">
+                          {stats.failedChecks}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--muted)]">
+                          z {stats.totalChecks} pomiarów
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
 
               <div className="mb-5">
                 <p className="mb-3 text-sm font-medium text-[var(--foreground)]">
