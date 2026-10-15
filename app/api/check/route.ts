@@ -1,11 +1,8 @@
 
 import { NextResponse } from "next/server";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { portals } from "@/lib/portals";
 
-
-type HistoryEntry = {
+type CheckResult = {
   id: number;
   name: string;
   url: string;
@@ -15,37 +12,8 @@ type HistoryEntry = {
   checkedAt: string;
 };
 
-type HistoryStore = Record<string, HistoryEntry[]>;
-
-const HISTORY_LIMIT = 100;
-
-async function saveHistory(results: HistoryEntry[]) {
-  const directory = join(process.cwd(), "data");
-  const filePath = join(directory, "history.json");
-
-  await mkdir(directory, { recursive: true });
-
-  let history: HistoryStore = {};
-
-  try {
-    const content = await readFile(filePath, "utf8");
-    history = JSON.parse(content) as HistoryStore;
-  } catch {
-    // Plik historii jeszcze nie istnieje.
-  }
-
-  for (const result of results) {
-    const key = String(result.id);
-    const previousEntries = history[key] ?? [];
-
-    history[key] = [...previousEntries, result].slice(-HISTORY_LIMIT);
-  }
-
-  await writeFile(filePath, JSON.stringify(history, null, 2), "utf8");
-}
-
 export async function GET() {
-  const results: HistoryEntry[] = await Promise.all(
+  const results: CheckResult[] = await Promise.all(
     portals.map(async (portal) => {
       const start = Date.now();
 
@@ -82,12 +50,6 @@ export async function GET() {
       }
     })
   );
-
-  try {
-    await saveHistory(results);
-  } catch (error) {
-    console.error("Błąd zapisu historii:", error);
-  }
 
   return NextResponse.json({
     success: true,
