@@ -507,5 +507,15 @@ export const portals: Portal[] = [
     responseTime: null,
     iconUrl: "https://www.google.com/s2/favicons?domain=eu.edu.pl&sz=128",
   },
+  {
+    id: 50,
+    name: "Studia-Online.pl (WSKZ)",
+    category: "Uczelnie",
+    description: "Platforma studiów online i materiałów dydaktycznych Wyższej Szkoły Kształcenia Zawodowego",
+    url: "https://studia-online.pl/",
+    status: "unknown",
+    responseTime: null,
+    iconUrl: "https://www.google.com/s2/favicons?domain=studia-online.pl&sz=128",
+  },
 
 ];
